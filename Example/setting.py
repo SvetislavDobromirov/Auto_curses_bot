@@ -1,0 +1,4 @@
+
+
+#Откровение_Бот
+TOKEN = "2132311402:AAGssUUNOY4n7XTCXaR7Yg0p0h5kD36TzM4"
