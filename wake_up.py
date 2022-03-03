@@ -21,10 +21,11 @@ import keyboards
 import datetime
 import list_video
 import logging
+import db_video
 
 global dict_of_users
 global admin_list
-admin_list = (658697862,)
+admin_list = (658697862, 492213965)
 
 
 async def log(text):
@@ -230,7 +231,7 @@ async def callback(callback_query: types.CallbackQuery):
             #ОТПРАВИТЬ ЗАНЯТИЕ
         result = time_check.hour_2_check(dict_of_users[chat_id][5])
         if dict_of_users[chat_id][3] == "ACTIVE" and result == False:
-            await bot.send_message(chat_id, "Время, отведенное на занятие сегодня истекло. Ыы можете изменить время на более подходящее.")
+            await bot.send_message(chat_id, "Время, отведенное на занятие сегодня истекло. Вы можете изменить время на более подходящее.")
         elif dict_of_users[chat_id][3] == "ACTIVE" and result == True:
             if "lite" in dict_of_users[chat_id][6]:
                 await minus_class(chat_id)
@@ -332,9 +333,9 @@ async def callback(callback_query: types.CallbackQuery):
             description = "Предоплата за f{q_cl} занятий Йога Пробуждения с возможностью переноса занятий."
 
         #ЗАТЫЧКА!!!!
-        #summ_for_payment = 100
+        summ_for_payment = 100
         ####
-            
+
         payment = Payment.create({
         "amount": {
             "value": f"{summ_for_payment}",
@@ -350,8 +351,8 @@ async def callback(callback_query: types.CallbackQuery):
         "order_id": "0"
         }})
         ###ЗАТЫЧКА!!!
-        #payment_url = payment.confirmation.confirmation_url
-        payment_url = "vk.com"
+        payment_url = payment.confirmation.confirmation_url
+        #payment_url = "vk.com"
 
         inline_button_url = InlineKeyboardButton('Перейти на страницу оплаты.', url=payment_url)
         inline_keyboard_url = InlineKeyboardMarkup().add(inline_button_url)
@@ -374,10 +375,16 @@ async def callback(callback_query: types.CallbackQuery):
         await update_info(temp_list)
         text = texts.info_about_try_text
         await bot.send_message(chat_id, text)
+        
 ####КОПИЯ СТАРТ###        
-@dp.message_handler()
+@dp.message_handler(content_types = types.ContentType.ANY)
 async def start(message: types.Message):
     chat_id = message.chat.id
+    print(message)
+    if (chat_id in admin_list) and message.video:
+        db_video.write_new_video(message.video.file_id)
+        await bot.send_message(chat_id, "Видео успешно добавлено")
+        return
     #checking user for registration
     #If User not registered, reg him.
     if check_new_user(chat_id) == False:
@@ -422,7 +429,7 @@ async def check_pay(chat_id, payment_id,q_classes, set_mode):
         
         #ЗАТЫЧКА!
         await asyncio.sleep(5)
-        status = "succeeded"
+        # status = "succeeded"
         ##############
         
         if status == "succeeded":
@@ -699,6 +706,7 @@ async def check_last_day(chat_id):
                 
             
 async def send_class(chat_id, message_id):
+    print ("Функция сенд класс")
     global dict_of_users
    
     
@@ -708,21 +716,26 @@ async def send_class(chat_id, message_id):
     message_id = message_id +1
     status = dict_of_users[chat_id][3]
     if status == "NEW":
-        link = list_video.vid[0]
+        #link = list_video.vid[0]
+        print ("NEW OK")
+        f_id = db_video.load_id_video(0)
     elif status == "ACTIVE":
         dict_class = list_video.load_dict()
-        vinum = dict_class[chat_id] # current video for if
+        vinum = dict_class[chat_id] # current video for id
         if vinum > list_video.vi:
             while (vinum > list_video.vi):
                 vinum = vinum - list_video.vi
-        link = list_video.vid[vinum]
+                
+        #link = list_video.vid[vinum]
+        f_id = db_video.load_id_video(vinum)
         vinum = vinum + 1
         dict_class[chat_id] = vinum
         list_video.write_dict(dict_class)
     else:
         print ("719 main wrong-status")
-    await bot.send_message(chat_id, "Если видео не разворачивается на весь экран, рекомендую для просмотра видео перейти на youtobe")
-    await bot.send_message(chat_id, link)
+    await bot.send_message(chat_id, "ВНИМАНИЕ! ))))) Если видео не было получено, просьба обновить телеграмм и написать в поддержку /contacts")
+
+    await bot.send_video(chat_id, f_id, protect_content = True)
 
     
     message_id = message_id +1
@@ -776,7 +789,7 @@ async def start_async(x):
 
 #__RUN___
 if __name__ == '__main__':
-    logging.basicConfig(filename='example.log', level=logging.DEBUG)
+    logging.basicConfig(filename='example.log', level=logging.ERROR)
     #logging.debug('This message should go to the log file')
     #logging.info('So should this')
     #logging.warning('And this, too')
